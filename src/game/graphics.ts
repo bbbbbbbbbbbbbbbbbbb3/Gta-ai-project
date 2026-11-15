@@ -16,6 +16,18 @@ export const SUN_DIR = new THREE.Vector3(-0.55, 0.62, -0.56).normalize();
 const SHADOW_HALF = 85;
 const SHADOW_RES = 2048;
 
+/** Software rasterisers (SwiftShader, llvmpipe, WARP) can't afford shadows + bloom. */
+export function isSoftwareGpu(r: THREE.WebGLRenderer): boolean {
+  try {
+    const gl = r.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+    return /swiftshader|llvmpipe|softpipe|software|basic render|warp/i.test(name);
+  } catch {
+    return false;
+  }
+}
+
 export class Graphics {
   quality: Quality;
   readonly sun: THREE.DirectionalLight;

@@ -1,4 +1,4 @@
-import { Graphics, Quality } from './graphics';
+import { Graphics, Quality, isSoftwareGpu } from './graphics';
 import * as THREE from 'three';
 import { Sfx } from './audio';
 import { Car, DriveInput } from './car';
@@ -184,7 +184,8 @@ export class Game {
     this.scene.fog = new THREE.Fog(0xe7a77f, 120, 560);
     this.scene.background = new THREE.Color(0xe7a77f);
     const saved = localStorage.getItem('cj-quality') as Quality | null;
-    this.gfx = new Graphics(r, this.scene, this.camera, sky, saved ?? (this.platform === 'touch' ? 'performance' : 'cinematic'));
+    const weak = this.platform === 'touch' || isSoftwareGpu(r);
+    this.gfx = new Graphics(r, this.scene, this.camera, sky, saved ?? (weak ? 'performance' : 'cinematic'));
 
     this.crowd = new Crowd(this.city.blocks, this.grid);
     this.crowd.group.traverse((o) => (o.castShadow = true));

@@ -14,21 +14,40 @@ export default function App() {
   const [ui, setUi] = useState<UiState | null>(null);
   const [showControls, setShowControls] = useState(false);
   const [xrError, setXrError] = useState<string | null>(null);
+  const [boot, setBoot] = useState<'loading' | 'ready' | 'nogl'>('loading');
   const [showDebug, setShowDebug] = useState(() => new URLSearchParams(location.search).has('debug'));
 
   useEffect(() => {
     if (!mountRef.current) return;
-    const g = new Game(mountRef.current);
-    gameRef.current = g;
-    g.onUi = setUi;
-    setUi(g.uiState());
+    const mount = mountRef.current;
+    let g: Game | null = null;
+    let cancelled = false;
+    // Let the loading screen paint before the (blocking) world build and shader compile.
+    const id = requestAnimationFrame(() =>
+      setTimeout(() => {
+        if (cancelled) return;
+        try {
+          g = new Game(mount);
+        } catch (e) {
+          console.warn('Concrete Jungle could not start WebGL', e);
+          setBoot('nogl');
+          return;
+        }
+        gameRef.current = g;
+        g.onUi = setUi;
+        setUi(g.uiState());
+        setBoot('ready');
+      }, 30),
+    );
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'Backquote') setShowDebug((v) => !v);
     };
     window.addEventListener('keydown', onKey);
     return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
       window.removeEventListener('keydown', onKey);
-      g.dispose();
+      g?.dispose();
       gameRef.current = null;
     };
   }, []);
@@ -46,6 +65,28 @@ export default function App() {
   return (
     <div className="app">
       <div ref={mountRef} className="stage" />
+      {boot !== 'ready' && (
+        <div className="overlay menu boot">
+          <div className="menu-card">
+            <p className="eyebrow">A rooftop action sandbox</p>
+            <h1 className="title">
+              Concrete
+              <br />
+              Jungle
+            </h1>
+            {boot === 'loading' ? (
+              <p className="lede boot-status" role="status">
+                Building the city…
+              </p>
+            ) : (
+              <p className="lede" role="alert">
+                This game needs WebGL, and your browser couldn’t start it. Turn on hardware acceleration in your browser
+                settings, or try a recent Chrome, Edge, Firefox or Quest Browser.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
       {ui && (
         <>
           {showDebug && (
