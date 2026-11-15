@@ -1,3 +1,4 @@
+import { Graphics, Quality } from './graphics';
 import * as THREE from 'three';
 import { Sfx } from './audio';
 import { Car, DriveInput } from './car';
@@ -34,6 +35,7 @@ export interface UiState {
   xrActive: boolean;
   pointerLocked: boolean;
   muted: boolean;
+  quality: Quality;
   fps: number;
   drawCalls: number;
   flash: number; // increments on events for HUD pulses
@@ -65,6 +67,8 @@ const tmpQ = new THREE.Quaternion();
 
 export class Game {
   renderer: THREE.WebGLRenderer;
+  gfx: Graphics;
+  private flatQuality: Quality | null = null;
   scene = new THREE.Scene();
   camera: THREE.PerspectiveCamera;
   rig = new THREE.Group();
@@ -160,7 +164,6 @@ export class Game {
   constructor(private container: HTMLElement) {
     this.platform = window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop';
     const r = (this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }));
-    r.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     r.setSize(container.clientWidth, container.clientHeight);
     r.xr.enabled = true;
     r.xr.setReferenceSpaceType('local-floor');
@@ -178,21 +181,24 @@ export class Game {
     this.grid = new BoxGrid(this.city.boxes);
     const { root, sky } = buildCityMeshes(this.city);
     this.scene.add(root, sky);
-    this.scene.fog = new THREE.Fog(0xffb98a, 140, 520);
-    this.scene.background = new THREE.Color(0xffb98a);
-    const hemi = new THREE.HemisphereLight(0xcfe0ff, 0x8a6d5a, 1.25);
-    const sun = new THREE.DirectionalLight(0xffe2c4, 1.7);
-    sun.position.set(-0.5, 0.8, -0.6);
-    this.scene.add(hemi, sun);
+    this.scene.fog = new THREE.Fog(0xe7a77f, 120, 560);
+    this.scene.background = new THREE.Color(0xe7a77f);
+    const saved = localStorage.getItem('cj-quality') as Quality | null;
+    this.gfx = new Graphics(r, this.scene, this.camera, sky, saved ?? (this.platform === 'touch' ? 'performance' : 'cinematic'));
 
     this.crowd = new Crowd(this.city.blocks, this.grid);
+    this.crowd.group.traverse((o) => (o.castShadow = true));
+    this.car.group.traverse((o) => {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    });
     this.scene.add(this.crowd.group, this.car.group, this.particles.points, this.popups.group, this.projectiles.group);
 
     // Rings + beacons
     const n = this.city.rings.length;
     this.ringMesh = new THREE.InstancedMesh(
       new THREE.TorusGeometry(RING_RADIUS, 0.28, 8, 24),
-      new THREE.MeshBasicMaterial({ color: 0x66f0ff }),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 2.4, 2.8) }),
       n,
     );
     const beamGeo = new THREE.CylinderGeometry(0.5, 0.5, 120, 6, 1, true);
@@ -281,6 +287,12 @@ export class Game {
     this.emitUi(true);
   }
 
+  setQuality(q: Quality) {
+    this.gfx.setQuality(q);
+    localStorage.setItem('cj-quality', q);
+    this.emitUi(true);
+  }
+
   setMuted(m: boolean) {
     this.sfx.setMuted(m);
     this.emitUi(true);
@@ -316,6 +328,7 @@ export class Game {
     this.ac.abort();
     this.renderer.setAnimationLoop(null);
     this.sfx.dispose();
+    this.gfx.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -325,7 +338,7 @@ export class Game {
       h = this.container.clientHeight;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
+    this.gfx.resize(w, h);
   }
 
   // ---------------------------------------------------------------- input
@@ -357,6 +370,7 @@ export class Game {
         }
         if (e.code === 'KeyR' && (this.mode === 'finished' || this.mode === 'paused')) this.restart();
         if (e.code === 'KeyM') this.setMuted(!this.sfx.muted);
+        if (e.code === 'KeyG') this.setQuality(this.gfx.quality === 'cinematic' ? 'performance' : 'cinematic');
         if (e.code === 'Enter' && this.mode === 'menu') this.start();
       },
       sig,
@@ -448,6 +462,8 @@ export class Game {
     this.renderer.xr.addEventListener('sessionstart', () => {
       this.xrActive = true;
       this.platform = 'vr';
+      this.flatQuality = this.gfx.quality;
+      this.gfx.setQuality('performance');
       this.viewmodel.visible = false;
       this.camera.position.set(0, 0, 0);
       this.camera.rotation.set(0, 0, 0);
@@ -459,6 +475,7 @@ export class Game {
     });
     this.renderer.xr.addEventListener('sessionend', () => {
       this.xrActive = false;
+      if (this.flatQuality) this.gfx.setQuality(this.flatQuality);
       this.platform = window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop';
       this.viewmodel.visible = true;
       this.grip.release(0);
@@ -1304,7 +1321,9 @@ export class Game {
       } else this.rope.visible = false;
     }
     this.renderer.info.reset();
-    this.renderer.render(this.scene, this.camera);
+    const fp = this.inCar ? this.car.group.position : this.rig.position;
+    this.gfx.follow(fp.x, fp.z);
+    this.gfx.render();
   }
 
   private setFov(f: number) {
@@ -1380,13 +1399,14 @@ export class Game {
       aimDist: this.aim.dist,
       grappling: this.grapple.active,
       prompt: this.currentPrompt(),
-      hint: this.mode === 'playing' ? hints[this.hintStep]?.text ?? null : null,
+      hint: this.mode === 'playing' && !this.inCar ? hints[this.hintStep]?.text ?? null : null,
       inCar: this.inCar,
       speed: this.inCar ? Math.abs(this.car.forwardSpeed) : Math.hypot(this.body.vx, this.body.vz),
       xrSupported: this.xrSupported,
       xrActive: this.xrActive,
       pointerLocked: this.pointerLocked,
       muted: this.sfx.muted,
+      quality: this.gfx.quality,
       fps: this.fps,
       drawCalls: this.renderer.info.render.calls,
       flash: this.flash,

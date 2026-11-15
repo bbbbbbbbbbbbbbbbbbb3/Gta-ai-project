@@ -26,10 +26,10 @@ export class Car {
   private brakeLights: THREE.MeshBasicMaterial;
 
   constructor() {
-    const paint = new THREE.MeshLambertMaterial({ color: 0xff3d7f, flatShading: true });
-    const dark = new THREE.MeshLambertMaterial({ color: 0x212529, flatShading: true });
-    const glass = new THREE.MeshLambertMaterial({ color: 0x74c0fc, flatShading: true });
-    const stripe = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const paint = new THREE.MeshStandardMaterial({ color: 0xd81f4a, roughness: 0.22, metalness: 0.6 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x17191c, roughness: 0.7, metalness: 0.2 });
+    const glass = new THREE.MeshStandardMaterial({ color: 0x0d1520, roughness: 0.04, metalness: 0.9 });
+    const stripe = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.3, metalness: 0.3 });
     const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.7, 4.3), paint);
     chassis.position.y = 0.75;
     const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.6, 2.1), glass);

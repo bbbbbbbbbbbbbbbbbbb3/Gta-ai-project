@@ -36,7 +36,17 @@ export interface Block {
   park: boolean;
 }
 
+export interface ParkedCar {
+  x: number;
+  z: number;
+  /** true when the car is aligned with the z axis */
+  alongZ: boolean;
+  color: number;
+}
+
 export interface CityData {
+  parked: ParkedCar[];
+  signals: { x: number; z: number; rot: number }[];
   blocks: Block[];
   buildings: Building[];
   props: Prop[];
@@ -49,10 +59,11 @@ export interface CityData {
   half: number;
 }
 
-// Vibrant, stylised facade palette.
+// Urban facade palette: brick, sandstone, concrete, painted stucco, with a few
+// saturated accents so the district still reads as playful.
 const PALETTE = [
-  0xff6b6b, 0xffa94d, 0xffd43b, 0x69db7c, 0x38d9a9, 0x4dabf7, 0x748ffc, 0xda77f2, 0xf783ac, 0xe9ecef, 0x9775fa,
-  0x63e6be, 0xffc078, 0x8ce99a,
+  0xa4553f, 0x8e4a3a, 0xc07a55, 0xd9c3a0, 0xc9b79c, 0xb9b4ab, 0x9a9fa6, 0x7d8794, 0xe0d6c4, 0x6f7f8c, 0xb8875f,
+  0xd46a4c, 0x5e8c8a, 0xe2b45a,
 ];
 
 export function blockCenter(i: number): number {
@@ -208,7 +219,41 @@ export function generateCity(seed = 7): CityData {
   rings.push({ x: blockCenter(1) + PITCH / 2, y: 18, z: blockCenter(1) });
   rings.push({ x: blockCenter(4), y: 22, z: blockCenter(4) + PITCH / 2 });
 
-  return { blocks, buildings, props, boxes, rings, trees, lamps, spawn, carSpawn, half };
+  // Parked cars along the curbs (solid), and traffic signals at intersections.
+  // Uses its own RNG so the building layout above stays identical.
+  const r2 = mulberry32(seed * 31 + 5);
+  const CAR_COLORS = [0x1f2a44, 0xe9ecef, 0x868e96, 0x111214, 0x9b1d20, 0x2b5f8a, 0xc9a227, 0x4a5d3f];
+  const parked: ParkedCar[] = [];
+  const signals: CityData['signals'] = [];
+  const keepClear = (x: number, z: number) =>
+    Math.hypot(x - spawn.x, z - spawn.z) < 18 || Math.hypot(x - carSpawn.x, z - carSpawn.z) < 14;
+  for (let i = 0; i < GRID_N - 1; i++) {
+    const road = blockCenter(i) + PITCH / 2;
+    for (let j = 0; j < GRID_N; j++) {
+      const c = blockCenter(j);
+      for (const side of [-1, 1]) {
+        for (let t = -BLOCK / 2 + 5; t <= BLOCK / 2 - 5; t += 6.2) {
+          if (r2() > 0.38) continue;
+          const lat = road + side * 5.7;
+          const col = CAR_COLORS[Math.floor(r2() * CAR_COLORS.length)];
+          // street running along z (x = road)
+          if (!keepClear(lat, c + t)) parked.push({ x: lat, z: c + t, alongZ: true, color: col });
+          if (r2() > 0.5) continue;
+          // street running along x (z = road)
+          if (!keepClear(c + t, lat)) parked.push({ x: c + t, z: lat, alongZ: false, color: col });
+        }
+      }
+    }
+    for (let k = 0; k < GRID_N - 1; k++) {
+      const z = blockCenter(k) + PITCH / 2;
+      const o = STREET / 2 + 0.9;
+      signals.push({ x: road - o, z: z - o, rot: 0 });
+      signals.push({ x: road + o, z: z + o, rot: Math.PI });
+    }
+  }
+  for (const c of parked) boxes.push(c.alongZ ? makeBox(c.x, c.z, 2.0, 4.4, 1.45) : makeBox(c.x, c.z, 4.4, 2.0, 1.45));
+
+  return { blocks, buildings, props, boxes, rings, trees, lamps, spawn, carSpawn, half, parked, signals };
 }
 
 function inside2D(x: number, z: number, b: AABB, pad = 0) {

@@ -56,9 +56,9 @@ export class Crowd {
     headGeo.translate(0, 1.62, 0);
     const legGeo = new THREE.BoxGeometry(0.4, 0.55, 0.22);
     legGeo.translate(0, 0.28, 0);
-    this.bodies = new THREE.InstancedMesh(bodyGeo, new THREE.MeshLambertMaterial({ flatShading: true }), count);
-    this.heads = new THREE.InstancedMesh(headGeo, new THREE.MeshLambertMaterial({ flatShading: true }), count);
-    this.legs = new THREE.InstancedMesh(legGeo, new THREE.MeshLambertMaterial({ color: 0x364fc7 }), count);
+    this.bodies = new THREE.InstancedMesh(bodyGeo, new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.85 }), count);
+    this.heads = new THREE.InstancedMesh(headGeo, new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.7 }), count);
+    this.legs = new THREE.InstancedMesh(legGeo, new THREE.MeshStandardMaterial({ color: 0x2b3550, roughness: 0.9 }), count);
     for (const m of [this.bodies, this.heads, this.legs]) {
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       m.frustumCulled = false;

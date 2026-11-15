@@ -31,10 +31,20 @@ Collect all 12 sky rings as fast as you can. Knock pedestrians over with kinetic
 | Car enter / exit | F | CAR | A/X to enter, B/Y to exit |
 | Horn / handbrake drift | H / Space | JUMP drifts | |
 | Pause / restart | Esc or P / R | II | |
-| Mute | M | | |
+| Mute / graphics tier | M / G | Pause menu | |
 
 VR traversal: hold one or both grips, pull your hands, and your body moves the opposite way. Release while moving to launch with that momentum.
 On desktop, the grapple stands in for this. Grappling a roof edge reels you in and pops you up over the ledge.
+
+## Graphics
+
+There are two tiers, which you can switch in the pause menu or with G. Your choice is saved.
+
+- **Cinematic** (default on desktop): ACES tone mapping, soft sun shadows that follow the player, sky reflections on glass and wet asphalt, HDR bloom on lit windows and signals, and 4x MSAA.
+- **Performance** (default on touch, always used in VR): the same physically based materials and lighting, without shadows or post-processing.
+
+The facades are procedural. There are glass curtain-wall towers, plus masonry blocks with sills, ledges, pilasters and lit storefronts with awnings. There are no texture downloads.
+Street detail includes centre and edge lines, zebra crossings, traffic signals and solid parked cars.
 
 Add `?debug` to the URL (or press the backtick key) to show fps and draw calls.
 

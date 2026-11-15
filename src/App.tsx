@@ -113,6 +113,12 @@ export default function App() {
                   <button className="btn ghost" onClick={() => g?.setMuted(!ui.muted)}>
                     Sound: {ui.muted ? 'off' : 'on'}
                   </button>
+                  <button
+                    className="btn ghost"
+                    onClick={() => g?.setQuality(ui.quality === 'cinematic' ? 'performance' : 'cinematic')}
+                  >
+                    Graphics: {ui.quality === 'cinematic' ? 'cinematic' : 'performance'}
+                  </button>
                   <button className="btn ghost" onClick={() => g?.quitToMenu()}>
                     Title screen
                   </button>
@@ -248,8 +254,8 @@ function Controls() {
           <dd>Sprint</dd>
           <dt>F</dt>
           <dd>Enter or exit the car</dd>
-          <dt>Esc / P · M</dt>
-          <dd>Pause · mute</dd>
+          <dt>Esc / P · M · G</dt>
+          <dd>Pause · mute · graphics</dd>
         </dl>
       </div>
       <div>

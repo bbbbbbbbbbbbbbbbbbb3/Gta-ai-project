@@ -12,9 +12,9 @@ export interface Gauntlet {
   flash(amount: number): void;
 }
 
-const ARMOR = new THREE.MeshLambertMaterial({ color: 0x23305c, flatShading: true });
-const TRIM = new THREE.MeshLambertMaterial({ color: 0xffc94d, flatShading: true });
-const KNUCKLE = new THREE.MeshLambertMaterial({ color: 0x3d4f8f, flatShading: true });
+const ARMOR = new THREE.MeshStandardMaterial({ color: 0x33489a, flatShading: true, roughness: 0.38, metalness: 0.35 });
+const TRIM = new THREE.MeshStandardMaterial({ color: 0xf2bd52, flatShading: true, roughness: 0.3, metalness: 0.55 });
+const KNUCKLE = new THREE.MeshStandardMaterial({ color: 0x4a62b0, flatShading: true, roughness: 0.4, metalness: 0.3 });
 
 export function makeGauntlet(side: 'left' | 'right'): Gauntlet {
   const s = side === 'left' ? -1 : 1;

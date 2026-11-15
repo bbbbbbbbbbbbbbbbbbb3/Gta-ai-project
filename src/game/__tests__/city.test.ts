@@ -17,4 +17,15 @@ describe('generateCity', () => {
   it('builds a dense district', () => {
     expect(city.buildings.length).toBeGreaterThan(60);
   });
+  it('parks cars at the curb without blocking driving lanes', () => {
+    expect(city.parked.length).toBeGreaterThan(20);
+    for (const c of city.parked) {
+      // lateral offset from the road centre line must leave the 2 m-wide lane at +-3.5 clear
+      const lat = c.alongZ ? c.x : c.z;
+      const m = ((lat % 54) + 54) % 54; // roads sit on multiples of PITCH (54)
+      const off = Math.min(m, 54 - m);
+      expect(off - 1.0).toBeGreaterThan(3.5 + 1.0);
+      expect(off + 1.0).toBeLessThan(7); // stays off the sidewalk
+    }
+  });
 });
